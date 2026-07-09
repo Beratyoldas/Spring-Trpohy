@@ -1,5 +1,5 @@
 # SPRING TROPHY CANLI TAKİP PROJESİ — DURUM
-Son güncelleme: 9 Temmuz 2026 (v3 — M0 tamamlandı: depo iskeleti)
+Son güncelleme: 9 Temmuz 2026 (v4 — M1 tamamlandı: simülatör + backend)
 Bu dosya projenin tek gerçek kaynağıdır. Her önemli karardan sonra güncellenir,
 Claude projesinin bilgi alanına yüklenir ve repo kökünde tutulur.
 
@@ -45,14 +45,30 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   (backend/, sim/, mobile/, web/) açıldı, CLAUDE.md ve DURUM.md docs/ altından
   repo köküne taşındı (CLAUDE.md'nin öngördüğü yapıya uyum için — docs/ artık
   sadece vizyon docx'ini içeriyor), .gitignore ve kök README.md eklendi.
+- [09.07.2026] M1 tamamlandı: sim/ (Node.js düz JS, ESM — backend/sim'de TS
+  kullanılmıyor, sadece mobile'de zorunlu) + backend/ (Express + ws) yazıldı.
+  Mimari: backend yelken fiziğini bilmiyor, sadece ingest→izleyici fan-out
+  yapıyor (M5'te gerçek yarışçı telefonları da aynı ingest hattını kullanacak).
+  Parkur: "2 şamandıra" formatı (alt=start/bitiş, üst=rüzgar üstü dönüş),
+  koordinatlar Bebek–Kandilli civarı YER TUTUCU (gerçek kulüp rotası
+  netleşince `sim/parkur.js`'teki AYARLAR güncellenecek). Fizik/tramola
+  mantığı `sim/fizik.js`'te tek bir genel fonksiyonla (`bacakSeyriHesapla`)
+  hem orsa hem apaz bacağı için kullanılıyor; ±48° layline histerezisi
+  (45°+3° tampon) bilinen sonsuz-tramola tuzağını önlüyor.
+  Testler geçti: hızlandırılmış duman testi (40 tekne, ~37 dk sanal sürede
+  tur tamamlanıyor, <100ms gerçek süre) ve yük testi (20 izleyici + 40 tekne,
+  20 sn kesintisiz). Uçtan uca manuel doğrulama yapıldı (bağlanınca parkur,
+  sonra 2 sn'de bir 40 teknelik pozisyonlar akışı).
+  Not: Repo'ya `origin` remote'u (github.com/Beratyoldas/Spring-Trpohy)
+  oturum dışında eklenmiş/push'lanmış görünüyor; Claude Code push yapmadı.
 
 ## YAZILIM DURUMU
-- Tamamlandı: M0 (repo iskeleti).
-- Sırada: M1 — sim/ (40 sahte tekne, Boğaz rotaları, ±48° layline kuralı) +
-  backend/ (Express + ws, "parkur"/"pozisyonlar" akışı) + hızlandırılmış
-  simülasyon testi + 40 tekne × 2 sn yük testi.
+- Tamamlandı: M0 (repo iskeleti), M1 (simülatör + backend).
+- Sırada: M2 — web/ 2D canlı izleme (maplibre-gl-js, koyu "yayın" teması,
+  tekne ikonları + iz çizgisi, şamandıra/parkur, tekneye tıklayınca kart).
 - WebSocket veri formatı (kesinleşti, değişiklik önce sorulur):
   { "tekneId": "TR-001", "lat": 41.0451, "lon": 29.0341, "cog": 215, "sog": 6.4, "ts": 1720512000 }
+- Backend/sim çalıştırma: bkz. kök README.md.
 
 ## FİZİKSEL DURUM
 - Henüz başlanmadı. Sıradaki: tracker karşılaştırma raporu (Faz 2 hazırlığı).
