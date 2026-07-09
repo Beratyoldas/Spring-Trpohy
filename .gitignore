@@ -1,0 +1,27 @@
+# Ortam / gizli bilgiler
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build çıktıları
+dist/
+build/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+android/
+ios/
+*.apk
+*.aab
+
+# OS / editör
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
