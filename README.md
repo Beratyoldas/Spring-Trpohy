@@ -29,5 +29,34 @@ git clone <repo-url>
 cd spring-trophy
 ```
 
-Paketlerin kurulum ve çalıştırma adımları ilgili milestone tamamlandıkça
-buraya eklenecek (M1'den itibaren `sim/` ve `backend/` için).
+### Backend + Simülatör (M1)
+
+İki ayrı terminalde:
+
+```bash
+cd backend
+npm install
+cp .env.example .env   # gerekirse PORT'u değiştir
+npm start
+```
+
+```bash
+cd sim
+npm install
+cp .env.example .env   # gerekirse BACKEND_WS_URL'i değiştir
+npm start
+```
+
+Backend `ws://localhost:3000/canli` üzerinde dinler; simülatör bağlanınca
+40 sahte tekne 2 saniyede bir konum yayınlamaya başlar. Bir WebSocket
+istemcisiyle `ws://localhost:3000/canli` adresine bağlanırsan önce `parkur`,
+ardından düzenli aralıklarla `pozisyonlar` mesajları alırsın.
+
+### Testler
+
+```bash
+cd sim && npm test              # hızlandırılmış fizik/rota duman testi
+cd backend && npm run yuk-testi # 20 izleyici + 40 tekne yük testi
+```
+
+Paketlerin kalanı (mobile/, web/) ilgili milestone'lar tamamlandıkça buraya eklenecek.
