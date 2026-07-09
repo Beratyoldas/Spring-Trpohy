@@ -1,5 +1,5 @@
 # SPRING TROPHY CANLI TAKİP PROJESİ — DURUM
-Son güncelleme: 9 Temmuz 2026 (v2 — Spring Trophy vizyonu ve Claude Code geçişi)
+Son güncelleme: 9 Temmuz 2026 (v3 — M0 tamamlandı: depo iskeleti)
 Bu dosya projenin tek gerçek kaynağıdır. Her önemli karardan sonra güncellenir,
 Claude projesinin bilgi alanına yüklenir ve repo kökünde tutulur.
 
@@ -41,10 +41,16 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   öğrenilen ders: orsa layline kontrolü ±48° eşikle yapılmalı (işaret
   değişimiyle yapılınca sonsuz tramola bug'ı). Kod Claude Code'da yeniden
   kurulacak/temiz entegre edilecek.
+- [09.07.2026] M0 tamamlandı: git deposu kuruldu, monorepo klasörleri
+  (backend/, sim/, mobile/, web/) açıldı, CLAUDE.md ve DURUM.md docs/ altından
+  repo köküne taşındı (CLAUDE.md'nin öngördüğü yapıya uyum için — docs/ artık
+  sadece vizyon docx'ini içeriyor), .gitignore ve kök README.md eklendi.
 
 ## YAZILIM DURUMU
-- Sırada: Claude Code ile M0 (repo iskeleti) → M1 (simülatör+backend) →
-  FAZ1-BASLANGIC-PROMPT.md'deki milestone planı.
+- Tamamlandı: M0 (repo iskeleti).
+- Sırada: M1 — sim/ (40 sahte tekne, Boğaz rotaları, ±48° layline kuralı) +
+  backend/ (Express + ws, "parkur"/"pozisyonlar" akışı) + hızlandırılmış
+  simülasyon testi + 40 tekne × 2 sn yük testi.
 - WebSocket veri formatı (kesinleşti, değişiklik önce sorulur):
   { "tekneId": "TR-001", "lat": 41.0451, "lon": 29.0341, "cog": 215, "sog": 6.4, "ts": 1720512000 }
 
