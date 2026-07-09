@@ -1,0 +1,20 @@
+{
+  "name": "spring-trophy-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sunucu.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node sunucu.js",
+    "yuk-testi": "node test-yuk.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": "true",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.21.0"
+  }
+}
