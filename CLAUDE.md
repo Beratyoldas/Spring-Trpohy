@@ -66,7 +66,12 @@ spring-trophy/
 - Gizli bilgiler (.env) asla commit edilmez; .gitignore ilk commit'te kurulur.
 
 ## Git
-- Her çalışan adımdan sonra ayrı, Türkçe mesajlı commit. Tek dev commit yasak.
+- Yeni branch AÇMA. Tüm çalışma doğrudan main üzerinde.
+- Her doğrulanan adımdan sonra Türkçe mesajlı commit at ve main'e PUSH'la.
+  Tek dev commit yasak.
+- Commit mesajı formatı: "<milestone>-<adım no>: <ne yapıldı>"
+  (örn. "M2-3: parkur ve rüzgar oku çizimi"). Kullanıcı ilerlemeyi commit
+  mesajlarından takip eder; mesaj tek başına anlaşılır olmalı.
 
 ## Oturum kapanışı (HER OTURUMDA)
 1. DURUM.md'yi güncelle: kararlar, biten adımlar, açık sorular, sıradaki iş.
