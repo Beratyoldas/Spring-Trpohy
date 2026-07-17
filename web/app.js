@@ -1,5 +1,6 @@
 // Web canlı izleme (2D): MapLibre haritası + backend WS istemcisi.
-// Parkur mesajından şamandıralar, start hattı ve rüzgar göstergesi çizilir.
+// Parkur mesajından şamandıralar, start hattı ve rüzgar göstergesi;
+// pozisyonlar mesajından COG yönlü, kontra renkli tekne markerları çizilir.
 // Bağlantı koparsa 2 sn'de bir yeniden denenir; durum rozette gösterilir.
 // Altlık: OpenFreeMap "dark" stili — API anahtarı gerektirmez.
 
@@ -22,6 +23,10 @@ const RENKLER = {
   startHatti: '#e8eef5',
   etiket: '#e8eef5',
   etiketHale: '#0a0f14',
+  sancak: '#22c55e', // denizcilik: sancak kontra = yeşil (CSS --sancak ile aynı)
+  iskele: '#ef4444', // denizcilik: iskele kontra = kırmızı (CSS --iskele ile aynı)
+  notr: '#8fa0b3', // rüzgar henüz bilinmiyorsa
+  tekneKenar: '#0a0f14',
 };
 
 const YAZI_TIPI = ['Noto Sans Regular']; // OpenFreeMap glyph setindeki tek aile
@@ -57,13 +62,20 @@ harita.addControl(new maplibregl.NavigationControl(), 'top-right');
 // harita hazır olmadan gelen parkur bekletilir, hazır olunca uygulanır.
 let haritaHazir = false;
 let bekleyenParkur = null;
+let bekleyenPozisyonlar = null;
+let sonRuzgar = null; // kontra hesabı için son bilinen rüzgar
 
 harita.on('load', () => {
   parkurKatmanlariniKur();
+  tekneKatmaniniKur();
   haritaHazir = true;
   if (bekleyenParkur) {
     parkurCiz(bekleyenParkur);
     bekleyenParkur = null;
+  }
+  if (bekleyenPozisyonlar) {
+    tekneleriCiz(bekleyenPozisyonlar);
+    bekleyenPozisyonlar = null;
   }
 });
 
@@ -113,6 +125,57 @@ function parkurKatmanlariniKur() {
   });
 }
 
+// Tekne ikonu: kuzeye bakan ok/üçgen (icon-rotate=COG ile döndürülür).
+// Kontra başına bir kez üretilir; SDF yerine hazır renkli bitmap = keskin kenar.
+function tekneIkonuOlustur(renk) {
+  const boyut = 48; // 2x çözünürlük; pixelRatio: 2 ile 24 CSS px olarak çizilir
+  const tuval = document.createElement('canvas');
+  tuval.width = boyut;
+  tuval.height = boyut;
+  const cizim = tuval.getContext('2d');
+  cizim.beginPath();
+  cizim.moveTo(24, 3); // pruva (burun)
+  cizim.lineTo(41, 43); // sancak kıç köşe
+  cizim.lineTo(24, 33); // kıç çentiği
+  cizim.lineTo(7, 43); // iskele kıç köşe
+  cizim.closePath();
+  cizim.fillStyle = renk;
+  cizim.fill();
+  cizim.lineWidth = 3;
+  cizim.strokeStyle = RENKLER.tekneKenar;
+  cizim.lineJoin = 'round';
+  cizim.stroke();
+  return cizim.getImageData(0, 0, boyut, boyut);
+}
+
+function tekneKatmaniniKur() {
+  harita.addImage('tekne-sancak', tekneIkonuOlustur(RENKLER.sancak), { pixelRatio: 2 });
+  harita.addImage('tekne-iskele', tekneIkonuOlustur(RENKLER.iskele), { pixelRatio: 2 });
+  harita.addImage('tekne-notr', tekneIkonuOlustur(RENKLER.notr), { pixelRatio: 2 });
+
+  harita.addSource('tekneler', { type: 'geojson', data: BOS_GEOJSON });
+  harita.addLayer({
+    id: 'tekneler',
+    type: 'symbol',
+    source: 'tekneler',
+    layout: {
+      'icon-image': ['concat', 'tekne-', ['get', 'kontra']],
+      'icon-rotate': ['get', 'cog'],
+      'icon-rotation-alignment': 'map', // COG haritanın kuzeyine göre
+      'icon-allow-overlap': true, // filo sıkışınca tekne gizlenmesin
+      'icon-ignore-placement': true,
+    },
+  });
+}
+
+// Kontra: rüzgarın geldiği taraf. Bağıl açı = rüzgar yönü − COG normalize
+// edilir; (0,180] → rüzgar sancaktan (yeşil), (-180,0) → iskeleden (kırmızı).
+function kontraBul(cog) {
+  if (!sonRuzgar) return 'notr';
+  const fark = ((sonRuzgar.yon - cog + 540) % 360) - 180;
+  return fark >= 0 ? 'sancak' : 'iskele';
+}
+
 // --- Parkur çizimi ---
 function parkurIsle(mesaj) {
   ruzgarGuncelle(mesaj.ruzgar);
@@ -155,9 +218,31 @@ function parkurCiz(mesaj) {
   harita.getSource('start-hatti').setData(hat);
 }
 
+// --- Tekne çizimi: kaynak bir kez kurulur, her mesajda sadece veri güncellenir ---
+function pozisyonlarIsle(mesaj) {
+  if (!haritaHazir) {
+    bekleyenPozisyonlar = mesaj;
+    return;
+  }
+  tekneleriCiz(mesaj);
+}
+
+function tekneleriCiz(mesaj) {
+  const tekneler = {
+    type: 'FeatureCollection',
+    features: mesaj.tekneler.map((t) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [t.lon, t.lat] },
+      properties: { tekneId: t.tekneId, cog: t.cog, sog: t.sog, kontra: kontraBul(t.cog) },
+    })),
+  };
+  harita.getSource('tekneler').setData(tekneler);
+}
+
 // Rüzgar HUD'u: ok akış yönünü gösterir (meteorolojik yön = estiği yön → +180°)
 function ruzgarGuncelle(ruzgar) {
   if (!ruzgar) return;
+  sonRuzgar = ruzgar;
   const panel = document.getElementById('ruzgar');
   panel.hidden = false;
   document.getElementById('ruzgar-ok').style.transform = `rotate(${ruzgar.yon + 180}deg)`;
@@ -185,7 +270,7 @@ function baglan() {
       return;
     }
     if (mesaj.type === 'parkur') parkurIsle(mesaj);
-    // 'pozisyonlar' → adım 4'te tekne markerları
+    if (mesaj.type === 'pozisyonlar') pozisyonlarIsle(mesaj);
   });
 
   // Başarısız bağlantı denemesi de 'close' üretir → tek yeniden-deneme noktası
