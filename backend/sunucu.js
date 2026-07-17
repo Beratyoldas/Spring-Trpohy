@@ -1,7 +1,8 @@
 // Canlı veri backend'i: Express (sağlık ucu) + ws. Yelken fiziğini bilmez,
 // sadece iletir: simülatör/gerçek yarışçı (rol=simulator) ingest bağlantısından
 // gelen "parkur"/"pozisyonlar" mesajlarını izleyicilere (rol=izleyici) yayınlar.
-// Yeni izleyiciye bağlanır bağlanmaz son bilinen "parkur" gönderilir.
+// Yeni izleyiciye bağlanır bağlanmaz son bilinen "parkur" ve "pozisyonlar"
+// gönderilir (izleyici bir sonraki tiki beklemeden sahneyi kurabilsin).
 import { existsSync } from 'node:fs';
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
@@ -18,6 +19,7 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
   const wss = new WebSocketServer({ server, path: '/canli' });
 
   let sonParkur = null;
+  let sonPozisyonlar = null;
   const izleyiciler = new Set();
 
   function yayinla(mesaj) {
@@ -41,6 +43,7 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
           return;
         }
         if (mesaj.type === 'parkur') sonParkur = mesaj;
+        if (mesaj.type === 'pozisyonlar') sonPozisyonlar = mesaj;
         if (mesaj.type === 'parkur' || mesaj.type === 'pozisyonlar') yayinla(mesaj);
       });
       ws.on('close', () => console.log('[backend] simülatör bağlantısı koptu'));
@@ -48,6 +51,7 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
       izleyiciler.add(ws);
       console.log(`[backend] izleyici bağlandı (toplam ${izleyiciler.size})`);
       if (sonParkur) ws.send(JSON.stringify(sonParkur));
+      if (sonPozisyonlar) ws.send(JSON.stringify(sonPozisyonlar));
       ws.on('close', () => {
         izleyiciler.delete(ws);
         console.log(`[backend] izleyici ayrıldı (toplam ${izleyiciler.size})`);
