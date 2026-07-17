@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- Spring Trophy web canlı izleme (2D): koyu "yayın" temalı MapLibre haritası.
+     Build aracı yok; maplibre-gl CDN'den gelir, mantık app.js'te. -->
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spring Trophy — Canlı İzleme</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
+  <style>
+    /* Tasarım değişkenleri tek yerde — bileşenler renk hard-code etmez */
+    :root {
+      --zemin: #0a0f14;
+      --panel: rgba(13, 20, 28, 0.86);
+      --panel-kenar: rgba(255, 255, 255, 0.08);
+      --metin: #e8eef5;
+      --metin-soluk: #8fa0b3;
+      --vurgu: #35c3f0;
+      --sancak: #22c55e;  /* denizcilik: sancak kontra = yeşil */
+      --iskele: #ef4444;  /* denizcilik: iskele kontra = kırmızı */
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--zemin);
+      color: var(--metin);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    #harita { position: fixed; inset: 0; }
+
+    /* Yayın başlığı: haritanın üstünde yüzen panel */
+    #baslik {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 10;
+      padding: 10px 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-kenar);
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+    }
+    #baslik h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+    #baslik p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--metin-soluk);
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div id="harita"></div>
+  <header id="baslik">
+    <h1>SPRING TROPHY</h1>
+    <p>Canlı Yarış İzleme</p>
+  </header>
+
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
