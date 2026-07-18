@@ -115,6 +115,64 @@
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+
+    /* Tekne kartı: tıklanan teknenin canlı SOG/COG bilgisi */
+    #kart {
+      position: fixed;
+      right: 16px;
+      bottom: 48px; /* atıf çubuğunun üstünde */
+      z-index: 10;
+      min-width: 180px;
+      padding: 12px 14px;
+      background: var(--panel);
+      border: 1px solid var(--panel-kenar);
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+    }
+    .kart-baslik {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .kart-baslik h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    #kart-kapat {
+      width: 44px;   /* dokunma hedefi ≥44pt */
+      height: 44px;
+      margin: -10px -12px -10px 0;
+      border: none;
+      background: none;
+      color: var(--metin-soluk);
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #kart-kapat:hover { color: var(--metin); }
+    .kart-satirlar {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 14px;
+      margin-top: 8px;
+    }
+    .kart-satirlar .etiket {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--metin-soluk);
+      align-self: center;
+    }
+    .kart-satirlar .deger {
+      font-size: 15px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    #kart-kontra.sancak { color: var(--sancak); }
+    #kart-kontra.iskele { color: var(--iskele); }
   </style>
 </head>
 <body>
@@ -124,6 +182,19 @@
     <p>Canlı Yarış İzleme</p>
     <span id="rozet" class="bekliyor">BAĞLANIYOR</span>
   </header>
+
+  <!-- Tekne kartı: teknelere tıklayınca açılır, her karede canlı güncellenir -->
+  <aside id="kart" hidden>
+    <div class="kart-baslik">
+      <h2 id="kart-tekne">—</h2>
+      <button id="kart-kapat" aria-label="Kartı kapat">✕</button>
+    </div>
+    <div class="kart-satirlar">
+      <span class="etiket">SOG</span><span class="deger" id="kart-sog">—</span>
+      <span class="etiket">COG</span><span class="deger" id="kart-cog">—</span>
+      <span class="etiket">KONTRA</span><span class="deger" id="kart-kontra">—</span>
+    </div>
+  </aside>
 
   <!-- Rüzgar oku: akış yönünü gösterir (rüzgarın estiği yön + 180°) -->
   <div id="ruzgar" hidden>
