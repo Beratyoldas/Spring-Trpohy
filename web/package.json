@@ -1,0 +1,12 @@
+{
+  "name": "spring-trophy-web",
+  "version": "1.0.0",
+  "description": "Spring Trophy web canlı izleme (build araçsız; maplibre-gl CDN'den)",
+  "scripts": {
+    "test": "node test-interp.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": "true"
+}

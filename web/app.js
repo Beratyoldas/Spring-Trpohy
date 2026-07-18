@@ -14,6 +14,7 @@ const AYARLAR = {
   WS_ADRES: 'ws://localhost:3000/canli',
   YENIDEN_BAGLAN_MS: 2000,
   START_HATTI_YARIM_M: 125, // start hattının ALT şamandıradan her iki yana uzunluğu
+  VERI_ARALIGI_MS: 2000, // sim/gerçek kaynak pozisyonları bu aralıkla yollar
 };
 
 // Harita katmanları CSS değişkeni okuyamaz → katman renkleri burada, tek yerde.
@@ -62,8 +63,11 @@ harita.addControl(new maplibregl.NavigationControl(), 'top-right');
 // harita hazır olmadan gelen parkur bekletilir, hazır olunca uygulanır.
 let haritaHazir = false;
 let bekleyenParkur = null;
-let bekleyenPozisyonlar = null;
 let sonRuzgar = null; // kontra hesabı için son bilinen rüzgar
+
+// tekneId → interpolasyon durumu (interp.js). Çizim rAF döngüsünde yapılır;
+// harita hazır olmadan gelen pozisyonlar da burada birikir.
+const tekneDurumlari = new Map();
 
 harita.on('load', () => {
   parkurKatmanlariniKur();
@@ -72,10 +76,6 @@ harita.on('load', () => {
   if (bekleyenParkur) {
     parkurCiz(bekleyenParkur);
     bekleyenParkur = null;
-  }
-  if (bekleyenPozisyonlar) {
-    tekneleriCiz(bekleyenPozisyonlar);
-    bekleyenPozisyonlar = null;
   }
 });
 
@@ -218,26 +218,46 @@ function parkurCiz(mesaj) {
   harita.getSource('start-hatti').setData(hat);
 }
 
-// --- Tekne çizimi: kaynak bir kez kurulur, her mesajda sadece veri güncellenir ---
+// --- Tekne verisi: her mesaj interpolasyon durumlarını günceller (interp.js).
+// Çizim mesajda DEĞİL, aşağıdaki rAF döngüsünde her karede yapılır. ---
 function pozisyonlarIsle(mesaj) {
-  if (!haritaHazir) {
-    bekleyenPozisyonlar = mesaj;
-    return;
+  const simdi = performance.now();
+  const gelenIdler = new Set();
+  for (const t of mesaj.tekneler) {
+    gelenIdler.add(t.tekneId);
+    const ornek = { lat: t.lat, lon: t.lon, cog: t.cog, sog: t.sog };
+    tekneDurumlari.set(
+      t.tekneId,
+      Interp.yeniOrnek(tekneDurumlari.get(t.tekneId), ornek, simdi, AYARLAR.VERI_ARALIGI_MS),
+    );
   }
-  tekneleriCiz(mesaj);
+  // Artık gelmeyen tekneler haritada hayalet kalmasın
+  for (const id of tekneDurumlari.keys()) {
+    if (!gelenIdler.has(id)) tekneDurumlari.delete(id);
+  }
 }
 
-function tekneleriCiz(mesaj) {
-  const tekneler = {
-    type: 'FeatureCollection',
-    features: mesaj.tekneler.map((t) => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [t.lon, t.lat] },
-      properties: { tekneId: t.tekneId, cog: t.cog, sog: t.sog, kontra: kontraBul(t.cog) },
-    })),
-  };
-  harita.getSource('tekneler').setData(tekneler);
+// rAF döngüsü: her karede tüm teknelerin o anki interpolasyonlu konumu çizilir.
+// Tek kaynak + setData = 40 tekne için nesne yaratmadan akıcı güncelleme.
+function kareCiz() {
+  if (haritaHazir && tekneDurumlari.size > 0) {
+    const simdi = performance.now();
+    const tekneler = {
+      type: 'FeatureCollection',
+      features: [...tekneDurumlari].map(([tekneId, durum]) => {
+        const k = Interp.konumHesapla(durum, simdi, AYARLAR.VERI_ARALIGI_MS);
+        return {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [k.lon, k.lat] },
+          properties: { tekneId, cog: k.cog, sog: k.sog, kontra: kontraBul(k.cog) },
+        };
+      }),
+    };
+    harita.getSource('tekneler').setData(tekneler);
+  }
+  requestAnimationFrame(kareCiz);
 }
+requestAnimationFrame(kareCiz);
 
 // Rüzgar HUD'u: ok akış yönünü gösterir (meteorolojik yön = estiği yön → +180°)
 function ruzgarGuncelle(ruzgar) {
