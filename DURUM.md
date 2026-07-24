@@ -1,5 +1,5 @@
 # SPRING TROPHY CANLI TAKİP PROJESİ — DURUM
-Son güncelleme: 17 Temmuz 2026 (v5 — ticari hedef + GeoRacing referansı; M2 Claude Code'da başlıyor)
+Son güncelleme: 25 Temmuz 2026 (v6 — M2 tamamlandı: web 2D canlı izleme çalışıyor)
 Bu dosya projenin tek gerçek kaynağıdır. Her önemli karardan sonra güncellenir,
 Claude projesinin bilgi alanına yüklenir ve repo kökünde tutulur.
 
@@ -74,6 +74,22 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   3. ayak animasyon/kamera/replay → 4. ayak (Boğaz Yarışı) tam yayın + embed.
 
 ## ALINAN KARARLAR
+- [25.07.2026] HARİTA ALTLIĞI KARARI: **OpenFreeMap** (hazır "dark" stili:
+  tiles.openfreemap.org/styles/dark). Gerekçe: API anahtarı/kayıt istemiyor,
+  koyu yayın estetiğini doğrudan veriyor, kota derdi yok. MapTiler'a gerek
+  kalmadı → .env'de harita anahtarı YOK. (Ürünleşmede özel altlık istenirse
+  stil URL'si tek yerde: web/app.js → AYARLAR.STIL_URL.)
+- [25.07.2026] M2 tamamlandı: 7 adım, her adım ayrı commit'le main'e
+  push'landı (M2-1 … M2-7). Çalışma branch'siz, doğrudan main üzerinde
+  yürütüldü (CLAUDE.md Git bölümü buna göre güncellendi).
+- [25.07.2026] İnterpolasyon mimarisi: görüntü bilerek bir veri aralığı
+  (2 sn) geriden akar. Alternatif olan "anlık tahmin + düzeltme" sürekli
+  seğirme üretirdi; seçilen yaklaşımda yeni örnek gelince başlangıç noktası
+  teknenin O AN ÇİZİLİ konumu olduğu için ışınlanma imkânsız.
+- [25.07.2026] Eski m2-web-canli-izleme branch'i (önceki M2 denemesi:
+  parkur otoritesi backend'de + parkur düzenleme arayüzü + 3D denemesi)
+  BİRLEŞTİRİLMEDİ, silinmedi de. İçindeki "parkur düzenleme arayüzü" fikri
+  yukarıdaki açık soruya (parkuru kim girecek) aday çözüm olarak duruyor.
 - [17.07.2026] Ticari hedef netleşti: sistem 2D ve 3D olmak üzere iki ayrı
   paket halinde satılabilir ürün olacak; GeoRacing referans/kıyas ürünü.
   Hedef özellik listesi fazlara dağıtıldı (yukarıda).
@@ -102,12 +118,25 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   commit geçmişinde). Duman testi + yük testi geçti; uçtan uca doğrulandı.
 
 ## YAZILIM DURUMU
-- Tamamlandı: M0 (repo iskeleti), M1 (simülatör + backend).
-- DEVAM EDİYOR: M2 — web/ 2D canlı izleme (Claude Code'da, 7 adımlık plan).
-  Kapsam: pozisyon önbelleği, MapLibre koyu harita, parkur+rüzgar çizimi,
-  tekne markerları, interpolasyon/dead reckoning (web/interp.js, saf
-  fonksiyon + duman testi), iz çizgisi + tekne kartı, express.static sunum.
-  M2'ye bilinçli olarak DAHİL DEĞİL: sıralama, replay, zaman çizelgesi (Faz 3).
+- Tamamlandı: M0 (repo iskeleti), M1 (simülatör + backend), M2 (web 2D canlı
+  izleme — 7 adım, her adım ayrı commit'le main'e push'landı).
+- M2'de ne var (çalışır durumda, tek adres: http://localhost:3000):
+  - backend son "parkur" + son "pozisyonlar" mesajını önbellekler; yeni
+    izleyici tik beklemeden sahneyi kurar. Backend web/'i express.static
+    ile sunar (ayrı web sunucusu/build aracı YOK, maplibre-gl CDN'den).
+  - Koyu "yayın" temalı MapLibre haritası; şamandıralar, start hattı
+    (ALT şamandırada rüzgara dik), rüzgar göstergesi.
+  - 40 tekne tek GeoJSON kaynağı + symbol katmanı (marker yeniden
+    yaratılmaz, setData ile güncellenir); COG yönlü ok, kontra rengi
+    (sancak yeşil / iskele kırmızı).
+  - web/interp.js: interpolasyon + dead reckoning, saf fonksiyon modülü,
+    9 senaryoluk duman testi (`cd web && npm test`). Ekran bir aralık
+    geriden akar; yeni veri gelince başlangıç = o an ÇİZİLİ konum, bu
+    yüzden zıplama yapısal olarak imkânsız. Veri gecikirse COG/SOG ile
+    tahmin, 10 sn sınırından sonra tekne bekler.
+  - Son 60 sn'lik solan iz çizgisi (line-gradient) + tekneye tıklayınca
+    canlı SOG/COG/kontra gösteren kart.
+- M2'ye bilinçli olarak DAHİL DEĞİL: sıralama, replay, zaman çizelgesi (Faz 3).
 - Sırada (M2 sonrası): M3 — mobil iskelet VEYA M4 — PostgreSQL + kalıcılık +
   multi-tenant tasarım (sıra bir sonraki yönetim oturumunda netleşecek).
 - WebSocket veri formatı (kesin, değişiklik önce sorulur):
@@ -119,10 +148,15 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
 - Henüz başlanmadı. Sıradaki: tracker karşılaştırma raporu (Faz 2 hazırlığı).
 
 ## AÇIK SORULAR
-- Harita altlığı: OpenFreeMap mı MapTiler free mı? (M2 adım 2'de denenip
-  karar verilecek, sonucu buraya işlenecek)
 - 2D/3D paket ayrımının teknik sınırı: 3D paket ayrı build mi, feature flag
   mi? (Faz 2 başında karar)
+- Parkur şu an sim tarafından üretiliyor (yer tutucu Bebek–Kandilli
+  koordinatları). Gerçek kulüp rotası ve parkuru kimin gireceği (yarış
+  yönetimi arayüzü) M4/M5'te tasarlanacak.
+- İz çizgisi şu an sadece tarayıcı belleğinde (sayfa yenilenince sıfırlanır);
+  kalıcı iz/replay için pozisyon geçmişi DB'ye yazılmalı (M4).
+- 40 tekne performansı orta seviye masaüstünde sorunsuz; düşük güçlü telefon
+  tarayıcısında ölçülmedi (pilot öncesi test edilecek).
 - Fiyatlama/lisans modeli (etkinlik başına vs yıllık) — ürünleşme aşamasında.
 - Hukuki kontrol: marka, lisans, KVKK/konum verisi — uzmana danışılacak.
 - Yarışçı doğrulama Faz 1'de: e-posta kodu mu, SMS OTP mi, davet kodu mu? (M5)
@@ -134,5 +168,14 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
 - Yönetim: bu Claude.ai projesi. Yazılım: Claude Code (CLAUDE.md + DURUM.md).
 - Her Claude Code oturumu sonunda DURUM.md güncellenir ve Claude.ai proje
   bilgisine yeniden yüklenir.
-- NOT: Proje bilgisindeki DURUM.md 9 Temmuz v1'de kalmıştı; bu v5 hem proje
-  bilgisine hem repo köküne konulmalı (eski sürüm silinerek).
+- NOT: Bu v6 hem Claude.ai proje bilgisine hem repo köküne konulmalı
+  (eski sürüm silinerek).
+
+## NASIL ÇALIŞTIRILIR (M2 sonu)
+İki terminal, sonra tarayıcıda tek adres:
+```
+cd backend && npm start      # http://localhost:3000 (izleme ekranı + ws /canli)
+cd sim && npm start          # 40 tekne, 2 sn'de bir pozisyon
+```
+Testler: `cd sim && npm test`, `cd backend && npm run yuk-testi`,
+`cd web && npm test` — 25.07.2026 itibarıyla üçü de yeşil.
