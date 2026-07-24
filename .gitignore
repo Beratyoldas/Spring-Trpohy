@@ -19,9 +19,10 @@ ios/
 *.apk
 *.aab
 
-# OS / editör
+# OS / editör / araç
 .DS_Store
 Thumbs.db
 *.log
 .vscode/
 .idea/
+.claude/

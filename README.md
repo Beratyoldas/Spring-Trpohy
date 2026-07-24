@@ -15,7 +15,8 @@ docs/      Vizyon dosyası, ekran tasarım notları
 ```
 
 Her paket kendi milestone'unda kurulacak (bkz. DURUM.md — Yazılım Durumu).
-Şu an `backend/`, `sim/`, `mobile/`, `web/` boş; henüz çalıştırılabilir kod yok.
+Şu an çalışır durumda: `backend/` (M1), `sim/` (M1), `web/` (M2).
+`mobile/` henüz boş.
 
 ## Gereksinimler
 
@@ -52,11 +53,28 @@ Backend `ws://localhost:3000/canli` üzerinde dinler; simülatör bağlanınca
 istemcisiyle `ws://localhost:3000/canli` adresine bağlanırsan önce `parkur`,
 ardından düzenli aralıklarla `pozisyonlar` mesajları alırsın.
 
+### Web canlı izleme (M2)
+
+Backend, `web/` klasörünü kendisi sunar — ayrı bir sunucu/build aracı yoktur
+(maplibre-gl CDN'den gelir). Backend + simülatör çalışırken tarayıcıda aç:
+
+```
+http://localhost:3000
+```
+
+Görecekleriniz: koyu "yayın" temalı Boğaz haritası (OpenFreeMap dark, API
+anahtarı gerektirmez), şamandıralar + start hattı + rüzgar göstergesi,
+COG yönlü ve kontra renkli (sancak yeşil / iskele kırmızı) 40 tekne,
+interpolasyonlu akıcı hareket (veri kesilirse dead reckoning), son 60 sn'lik
+solan iz çizgileri ve tekneye tıklayınca canlı SOG/COG kartı. Bağlantı koparsa
+sayfa 2 sn'de bir yeniden dener (sol üst rozet: CANLI / BAĞLANIYOR).
+
 ### Testler
 
 ```bash
 cd sim && npm test              # hızlandırılmış fizik/rota duman testi
 cd backend && npm run yuk-testi # 20 izleyici + 40 tekne yük testi
+cd web && npm test              # interpolasyon / dead reckoning duman testi
 ```
 
-Paketlerin kalanı (mobile/, web/) ilgili milestone'lar tamamlandıkça buraya eklenecek.
+Paketlerin kalanı (mobile/) ilgili milestone'lar tamamlandıkça buraya eklenecek.

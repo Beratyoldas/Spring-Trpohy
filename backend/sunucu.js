@@ -1,19 +1,26 @@
-// Canlı veri backend'i: Express (sağlık ucu) + ws. Yelken fiziğini bilmez,
-// sadece iletir: simülatör/gerçek yarışçı (rol=simulator) ingest bağlantısından
-// gelen "parkur"/"pozisyonlar" mesajlarını izleyicilere (rol=izleyici) yayınlar.
+// Canlı veri backend'i: Express (sağlık ucu + web/ statik sunumu) + ws.
+// Yelken fiziğini bilmez, sadece iletir: simülatör/gerçek yarışçı
+// (rol=simulator) ingest bağlantısından gelen "parkur"/"pozisyonlar"
+// mesajlarını izleyicilere (rol=izleyici) yayınlar.
 // Yeni izleyiciye bağlanır bağlanmaz son bilinen "parkur" ve "pozisyonlar"
 // gönderilir (izleyici bir sonraki tiki beklemeden sahneyi kurabilsin).
+// İzleme ekranı tek adrestir: http://localhost:3000 → web/index.html
 import { existsSync } from 'node:fs';
 import http from 'node:http';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
+// web/ klasörü bu dosyaya göre bulunur; backend hangi klasörden başlatılırsa
+// başlatılsın doğru yolu görür
+const WEB_KLASORU = fileURLToPath(new URL('../web', import.meta.url));
+
 export function baslat(port = Number(process.env.PORT) || 3000) {
   const app = express();
   app.get('/saglik', (req, res) => res.json({ ok: true }));
+  app.use(express.static(WEB_KLASORU)); // izleme ekranı: kökten index.html
 
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server, path: '/canli' });

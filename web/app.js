@@ -10,8 +10,11 @@ const AYARLAR = {
   ZOOM: 13.5,
   MIN_ZOOM: 9,
   MAX_ZOOM: 18,
-  // Adım 7'de web/ backend'den sunulunca aynı adrese döner; şimdilik sabit.
-  WS_ADRES: 'ws://localhost:3000/canli',
+  // Sayfa backend'den sunuluyorsa (tek adres: localhost:3000) aynı hosta
+  // bağlanır; file:// ile açılırsa geliştirme varsayılanına düşer.
+  WS_ADRES: location.protocol.startsWith('http')
+    ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/canli`
+    : 'ws://localhost:3000/canli',
   YENIDEN_BAGLAN_MS: 2000,
   START_HATTI_YARIM_M: 125, // start hattının ALT şamandıradan her iki yana uzunluğu
   VERI_ARALIGI_MS: 2000, // sim/gerçek kaynak pozisyonları bu aralıkla yollar
