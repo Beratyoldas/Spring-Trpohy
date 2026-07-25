@@ -53,6 +53,64 @@ export async function saglikKontrol() {
   }
 }
 
+/**
+ * Bir yarışın parkurunu şamandıraları ve sıralı bacaklarıyla birlikte tek
+ * nesne olarak döndürür. Şekil, WebSocket "parkur" mesajına yakın tutuldu.
+ * Parkur yoksa null döner.
+ *
+ * NOT: pg, numeric sütunları STRING döndürür (kayan noktada hassasiyet
+ * kaybetmemek için). lat/lon/sog'u burada tek yerde sayıya çeviriyoruz ki
+ * çağıranlar string ile uğraşmasın.
+ */
+export async function parkurGetir(yarisId) {
+  const { rows: parkurlar } = await sorgu(
+    `select id, yaris_id, tip, ruzgar_yon, ruzgar_hiz, tur_sayisi
+       from parkurlar
+      where yaris_id = $1`,
+    [yarisId],
+  );
+  const parkur = parkurlar[0];
+  if (!parkur) return null;
+
+  const { rows: samandiralar } = await sorgu(
+    `select id, ad, rol, lat, lon
+       from samandiralar
+      where parkur_id = $1
+      order by rol, ad`,
+    [parkur.id],
+  );
+
+  const { rows: bacaklar } = await sorgu(
+    `select sira, hedef_samandira_id, ikinci_samandira_id, donus_yonu
+       from bacaklar
+      where parkur_id = $1
+      order by sira`,
+    [parkur.id],
+  );
+
+  return {
+    type: 'parkur',
+    parkurId: parkur.id,
+    yarisId: parkur.yaris_id,
+    tip: parkur.tip,
+    turSayisi: parkur.tur_sayisi,
+    ruzgar: { yon: parkur.ruzgar_yon, hiz: Number(parkur.ruzgar_hiz) },
+    samandiralar: samandiralar.map((s) => ({
+      id: s.id,
+      ad: s.ad,
+      rol: s.rol,
+      lat: Number(s.lat),
+      lon: Number(s.lon),
+    })),
+    bacaklar: bacaklar.map((b) => ({
+      sira: b.sira,
+      hedefSamandiraId: b.hedef_samandira_id,
+      ikinciSamandiraId: b.ikinci_samandira_id,
+      donusYonu: b.donus_yonu,
+    })),
+  };
+}
+
 /** Havuzu kapatır (script'lerin ve testlerin temiz çıkması için). */
 export async function kapat() {
   if (!havuz) return;
