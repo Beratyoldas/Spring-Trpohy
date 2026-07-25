@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node sunucu.js",
+    "migrate": "node migrate.js",
     "yuk-testi": "node test-yuk.js"
   },
   "keywords": [],
@@ -15,6 +16,7 @@
   "private": "true",
   "dependencies": {
     "express": "^5.2.1",
+    "pg": "^8.22.0",
     "ws": "^8.21.0"
   }
 }

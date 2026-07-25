@@ -1,0 +1,24 @@
+# Yerel geliştirme veritabanı. Şifre kök .env dosyasından okunur
+# (docker compose, yanındaki .env'i kendiliğinden yükler).
+# Çalıştırma: docker compose up -d   /   durdurma: docker compose stop
+services:
+  db:
+    image: postgres:17
+    container_name: spring-trophy-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: spring
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: spring_trophy
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-verisi:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spring -d spring_trophy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-verisi:

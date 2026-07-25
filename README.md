@@ -30,6 +30,25 @@ git clone <repo-url>
 cd spring-trophy
 ```
 
+### Veritabanı (M3)
+
+PostgreSQL 17 Docker ile ayağa kalkar. Şifreyi kök `.env` dosyasına yaz
+(`backend/.env` içindeki `DATABASE_URL` ile aynı olmalı):
+
+```bash
+cp .env.example .env    # POSTGRES_PASSWORD'u doldur
+docker compose up -d
+```
+
+Şemayı kur (tekrar çalıştırmak güvenlidir, uygulanmışlar atlanır):
+
+```bash
+cd backend && npm run migrate
+```
+
+`http://localhost:3000/saglik` → `{"ok":true,"db":"ok"}` dönmeli. DB kapalıysa
+sunucu çalışmaya devam eder, sağlık ucu `db:"hata"` + HTTP 503 döner.
+
 ### Backend + Simülatör (M1)
 
 İki ayrı terminalde:
@@ -37,7 +56,7 @@ cd spring-trophy
 ```bash
 cd backend
 npm install
-cp .env.example .env   # gerekirse PORT'u değiştir
+cp .env.example .env   # PORT ve DATABASE_URL'i kendine göre ayarla
 npm start
 ```
 

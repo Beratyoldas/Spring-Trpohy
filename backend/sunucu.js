@@ -10,6 +10,7 @@ import http from 'node:http';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import { saglikKontrol } from './db.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -19,7 +20,12 @@ const WEB_KLASORU = fileURLToPath(new URL('../web', import.meta.url));
 
 export function baslat(port = Number(process.env.PORT) || 3000) {
   const app = express();
-  app.get('/saglik', (req, res) => res.json({ ok: true }));
+  // Sunucu DB olmadan da ayağa kalkar ve canlı yayını sürdürür; sağlık ucu
+  // sadece durumu bildirir (DB yoksa 503 ile "hata").
+  app.get('/saglik', async (req, res) => {
+    const db = await saglikKontrol();
+    res.status(db.ok ? 200 : 503).json({ ok: true, db: db.ok ? 'ok' : 'hata' });
+  });
   app.use(express.static(WEB_KLASORU)); // izleme ekranı: kökten index.html
 
   const server = http.createServer(app);
