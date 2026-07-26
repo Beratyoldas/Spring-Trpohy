@@ -16,6 +16,29 @@ export function basliktanKimlik(authorizationBasligi) {
 }
 
 /**
+ * Ingest token'ını bulur: ÖNCE Authorization başlığı, yoksa ?token= query.
+ *
+ * Query neden kabul ediliyor: tarayıcının WebSocket API'si özel başlık
+ * göndermeye izin vermez (fetch'in aksine). Telefon yayıncı sayfası token'ı
+ * ancak adreste taşıyabilir. Node tabanlı sim başlık kullanmaya devam eder.
+ *
+ * GÜVENLİK: adresteki token proxy/erişim loglarına, tarayıcı geçmişine ve
+ * Referer başlığına düşebilir. Pilot seviyesinde kabul edildi; sonrasında
+ * kısa ömürlü (tek kullanımlık) token ya da WS subprotocol'üne taşınacak.
+ */
+export function istektenToken(authorizationBasligi, url) {
+  const baslikToken = bearerCoz(authorizationBasligi);
+  if (baslikToken) return baslikToken;
+  const queryToken = url?.searchParams?.get('token');
+  return queryToken || null;
+}
+
+/** İstekten (başlık ya da query) kimlik çıkarır: { kulupId, rol } veya null. */
+export function istektenKimlik(authorizationBasligi, url) {
+  return tokenDogrula(istektenToken(authorizationBasligi, url));
+}
+
+/**
  * Belirtilen role sahip geçerli token şart koşan middleware.
  * 401 = kim olduğun belli değil, 403 = kim olduğun belli ama bu iş senin değil.
  * Başarılıysa req.kimlik = { kulupId, rol }.

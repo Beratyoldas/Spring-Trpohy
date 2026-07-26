@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { saglikKontrol, sorgu } from './db.js';
-import { basliktanKimlik, gerekliRol } from './kimlik.js';
+import { istektenKimlik, gerekliRol } from './kimlik.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -92,7 +92,8 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
       return wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
     }
 
-    basliktanKimlik(req.headers.authorization)
+    // Token başlıkta ya da ?token= içinde olabilir (bkz. kimlik.js/istektenToken)
+    istektenKimlik(req.headers.authorization, url)
       .catch((hata) => {
         console.error('[backend] ingest doğrulaması yapılamadı:', hata.message);
         return null;

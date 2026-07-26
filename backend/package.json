@@ -4,7 +4,7 @@
   "description": "",
   "main": "sunucu.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test-kimlik.js",
     "start": "node sunucu.js",
     "migrate": "node migrate.js",
     "token-olustur": "node token-olustur.js",
