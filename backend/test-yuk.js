@@ -1,9 +1,15 @@
 // Yük testi: sunucuyu bellek-içi başlatır, 1 sahte simülatör (ingest) +
 // 20 sahte izleyici WS istemcisiyle ~20 sn gerçek zamanlı koşturur, tüm
 // izleyicilerin parkur + düzenli pozisyonlar mesajı aldığını doğrular.
-// Çalıştır: node backend/test-yuk.js
+// İngest artık token istediği için test kendi geçici kulübünü ve ingest
+// token'ını yaratır, sonunda siler. Çalıştır: node backend/test-yuk.js
+import { existsSync } from 'node:fs';
 import { WebSocket } from 'ws';
 import { baslat } from './sunucu.js';
+import { sorgu, kapat as dbKapat } from './db.js';
+import { tokenUret, tokenHashle } from './token.js';
+
+if (existsSync('.env')) process.loadEnvFile('.env');
 
 const PORT = 3099;
 const IZLEYICI_SAYISI = 20;
@@ -22,10 +28,42 @@ function sahtePozisyonlar() {
   }));
 }
 
+// Testin kendi kiracısı: gerçek verilere karışmasın diye geçici bir kulüp
+// açar. Kulüp silinince token'ı da cascade ile gider.
+async function geciciIngestTokeni() {
+  const { rows } = await sorgu("insert into kulupler (ad) values ('__yuk_testi__') returning id");
+  const kulupId = rows[0].id;
+  const token = tokenUret();
+  await sorgu('insert into tokenlar (kulup_id, rol, hash, ad) values ($1, $2, $3, $4)', [
+    kulupId,
+    'ingest',
+    tokenHashle(token),
+    'yük testi',
+  ]);
+  return { kulupId, token };
+}
+
+// Test yarıda patlasa bile geçici kulübün silinebilmesi için dışarıda tutulur
+let geciciKulupId = null;
+
+async function temizle() {
+  if (geciciKulupId) {
+    await sorgu('delete from kulupler where id = $1', [geciciKulupId]).catch((hata) =>
+      console.error('[yuk] geçici kulüp silinemedi:', hata.message),
+    );
+    geciciKulupId = null;
+  }
+  await dbKapat();
+}
+
 async function calistir() {
   const { kapat } = baslat(PORT);
+  const { kulupId, token } = await geciciIngestTokeni();
+  geciciKulupId = kulupId;
 
-  const sim = new WebSocket(`ws://localhost:${PORT}/canli?rol=simulator`);
+  const sim = new WebSocket(`ws://localhost:${PORT}/canli?rol=simulator`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   await new Promise((resolve, reject) => {
     sim.once('open', resolve);
     sim.once('error', reject);
@@ -61,6 +99,7 @@ async function calistir() {
   sim.close();
   izleyiciler.forEach((ws) => ws.close());
   await kapat();
+  await temizle();
 
   const beklenenMinPozisyon = Math.floor((SURE_SN * 1000) / ADIM_MS) - 2; // birkaç tik toleransı
   let basarisiz = false;
@@ -77,7 +116,8 @@ async function calistir() {
   process.exit(0);
 }
 
-calistir().catch((err) => {
+calistir().catch(async (err) => {
   console.error('[yuk] hata:', err);
+  await temizle();
   process.exit(1);
 });

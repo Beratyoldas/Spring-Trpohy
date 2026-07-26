@@ -10,7 +10,16 @@ import { filoOlustur, filoAdimla, herkesBitti, AYARLAR as FILO_AYARLARI } from '
 if (existsSync('.env')) process.loadEnvFile('.env');
 
 const BACKEND_WS_URL = process.env.BACKEND_WS_URL || 'ws://localhost:3000/canli';
+const BACKEND_TOKEN = process.env.BACKEND_TOKEN;
 const ADIM_ARALIGI_MS = 2000;
+
+if (!BACKEND_TOKEN) {
+  console.error('[sim] BACKEND_TOKEN tanımlı değil — backend ingest bağlantısı token ister.');
+  console.error('      Üretmek için (backend klasöründe):');
+  console.error('        npm run token-olustur -- <kulup_id> ingest "simülatör"');
+  console.error('      Sonra sim/.env içine BACKEND_TOKEN=<token> satırını ekle.');
+  process.exit(1);
+}
 
 function yarisBaslat(ws) {
   const parkur = parkurUret();
@@ -51,11 +60,20 @@ function yarisBaslat(ws) {
 }
 
 function baglan() {
-  const ws = new WebSocket(`${BACKEND_WS_URL}?rol=simulator`);
+  const ws = new WebSocket(`${BACKEND_WS_URL}?rol=simulator`, {
+    headers: { Authorization: `Bearer ${BACKEND_TOKEN}` },
+  });
 
   ws.on('open', () => {
     console.log('[sim] backend\'e bağlandı');
     yarisBaslat(ws);
+  });
+  // El sıkışma 101 dışında bir yanıtla döndü (401/403 = token sorunu).
+  // Yeniden denemek anlamsız, sonsuz döngü olurdu — çık.
+  ws.on('unexpected-response', (_istek, yanit) => {
+    console.error(`[sim] backend bağlantıyı reddetti: HTTP ${yanit.statusCode}`);
+    console.error('      BACKEND_TOKEN geçerli mi ve rolü "ingest" mi?');
+    process.exit(1);
   });
   ws.on('close', () => {
     console.log('[sim] bağlantı koptu, 2 sn sonra tekrar denenecek');
