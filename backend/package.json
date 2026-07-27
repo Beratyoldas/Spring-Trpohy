@@ -4,9 +4,11 @@
   "description": "",
   "main": "sunucu.js",
   "scripts": {
-    "test": "node test-kimlik.js",
+    "test": "node test-kimlik.js && node test-pozisyon.js",
+    "test-pozisyon": "node test-pozisyon.js",
     "start": "node sunucu.js",
     "migrate": "node migrate.js",
+    "pozisyon-oku": "node pozisyon-oku.js",
     "token-olustur": "node token-olustur.js",
     "yuk-testi": "node test-yuk.js"
   },

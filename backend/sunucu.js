@@ -15,6 +15,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { saglikKontrol, sorgu } from './db.js';
 import { istektenKimlik, gerekliRol } from './kimlik.js';
+import { yaziciOlustur } from './pozisyon.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -103,7 +104,7 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
         if (!kimlik) return elSikismayiReddet(socket, 401, 'Unauthorized');
         if (kimlik.rol !== 'ingest') return elSikismayiReddet(socket, 403, 'Forbidden');
         wss.handleUpgrade(req, socket, head, (ws) => {
-          ws.kimlik = kimlik; // pozisyonlar bu kulübe yazılacak (sonraki adım)
+          ws.kimlik = kimlik; // pozisyonlar bu kulübe yazılır
           wss.emit('connection', ws, req);
         });
       });
@@ -127,6 +128,8 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
     if (rol === 'simulator') {
       // Buraya ulaşan her ingest bağlantısı upgrade'de doğrulanmıştır
       console.log(`[backend] ingest bağlandı (kulüp ${ws.kimlik.kulupId})`);
+      // Geçmiş yazıcısı bağlantı başına: yarış bir kez çözülür (bkz. pozisyon.js)
+      const pozisyonYazici = yaziciOlustur(ws.kimlik.kulupId);
       ws.on('message', (veri) => {
         let mesaj;
         try {
@@ -137,6 +140,9 @@ export function baslat(port = Number(process.env.PORT) || 3000) {
         if (mesaj.type === 'parkur') sonParkur = mesaj;
         if (mesaj.type === 'pozisyonlar') sonPozisyonlar = mesaj;
         if (mesaj.type === 'parkur' || mesaj.type === 'pozisyonlar') yayinla(mesaj);
+        // Yayın ÖNCE, arşiv SONRA ve beklemeden: DB yavaşlasa da (ya da ölse de)
+        // canlı izleyiciler tek tik gecikmez. yaz() fırlatmaz.
+        if (mesaj.type === 'pozisyonlar') pozisyonYazici.yaz(mesaj);
       });
       ws.on('close', () => console.log('[backend] ingest bağlantısı koptu'));
     } else {

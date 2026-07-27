@@ -1,5 +1,6 @@
 # SPRING TROPHY CANLI TAKİP PROJESİ — DURUM
-Son güncelleme: 25 Temmuz 2026 (v6 — M2 tamamlandı: web 2D canlı izleme çalışıyor)
+Son güncelleme: 27 Temmuz 2026 (v7 — M3 tamamlandı: PostgreSQL, şema v1, token
+koruması ve pozisyon geçmişinin DB'ye yazılması)
 Bu dosya projenin tek gerçek kaynağıdır. Her önemli karardan sonra güncellenir,
 Claude projesinin bilgi alanına yüklenir ve repo kökünde tutulur.
 
@@ -74,6 +75,20 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   3. ayak animasyon/kamera/replay → 4. ayak (Boğaz Yarışı) tam yayın + embed.
 
 ## ALINAN KARARLAR
+- [27.07.2026] MİLESTONE NUMARALANDIRMASI DÜZELTİLDİ: v6'da "M3 = mobil
+  iskelet, M4 = PostgreSQL" yazıyordu; kod deposunda PostgreSQL işi **M3**
+  etiketiyle yapıldı (M3-1 … M3-4). Tek gerçek kaynak commit geçmişidir:
+  **M3 = PostgreSQL + kalıcılık + multi-tenant**, mobil iskelet M4'e kaydı.
+- [27.07.2026] POZİSYON GEÇMİŞİ AKIŞI (M3-4): ingest'ten gelen her
+  "pozisyonlar" mesajı ÖNCE izleyicilere yayınlanır, SONRA beklemeden
+  (await'siz) DB'ye yazılır. Gerekçe: arşiv canlı yayının önüne geçemez —
+  DB yavaşlasa ya da tamamen ölse bile izleyici tek tik gecikmez.
+  40 tekne tek `insert ... unnest(...)` sorgusuyla yazılır (40 ayrı insert değil).
+- [27.07.2026] HANGİ YARIŞA YAZILIYOR: kulüp ingest token'ından gelir;
+  yarış, o kulübün `durum='canli'` yarışıdır (yoksa en yeni yarış) ve
+  bağlantı başına BİR KEZ çözülüp önbelleklenir. Alternatif olan ".env'de
+  sabit yarış id'si" elle bakım gerektirdiği için elendi. Yarış bulunamazsa
+  sunucu çökmez, 30 sn'de bir yeniden dener ve yazmadan devam eder.
 - [25.07.2026] HARİTA ALTLIĞI KARARI: **OpenFreeMap** (hazır "dark" stili:
   tiles.openfreemap.org/styles/dark). Gerekçe: API anahtarı/kayıt istemiyor,
   koyu yayın estetiğini doğrudan veriyor, kota derdi yok. MapTiler'a gerek
@@ -119,7 +134,23 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
 
 ## YAZILIM DURUMU
 - Tamamlandı: M0 (repo iskeleti), M1 (simülatör + backend), M2 (web 2D canlı
-  izleme — 7 adım, her adım ayrı commit'le main'e push'landı).
+  izleme — 7 adım), M3 (PostgreSQL + kalıcılık + multi-tenant — 4 adım).
+- M3'te ne var (çalışır durumda, `docker compose up -d` ile DB ayakta):
+  - M3-1 backend/db.js: tek pg havuzu, TEMBEL kurulur, `havuz.on('error')`
+    ile DB koparsa süreç çökmez. DB kapalıyken backend AYAKTA kalır ve M2
+    canlı yayını çalışmaya devam eder; sadece /saglik 503 döner.
+  - M3-2 şema v1 (migrations/, backend/migrate.js ile idempotent uygulanır):
+    kulupler → etkinlikler → yarislar → parkurlar → samandiralar/bacaklar,
+    ayrıca pozisyonlar ve tokenlar. Geliştirme tohum verisi sabit id'lerle.
+  - M3-3 token/rol koruması: düz token saklanmaz (yalnız sha256 hash'i).
+    Ingest WS bağlantısı ve /api/* korumalı, izleyici tarafı herkese açık.
+  - M3-4 pozisyon geçmişi: her "pozisyonlar" mesajı `pozisyonlar` tablosuna
+    yazılır (yayın bozulmadan, bkz. kararlar). Okuma/doğrulama araçları:
+    `npm run pozisyon-oku`, `npm run test-pozisyon`.
+    Ölçüldü: 40 tekne × 9 tik = 360 satır, 40 farklı tekne; aynı anda web
+    izleme ekranı tik başına 40 tekne almaya devam etti.
+- DB olmadan da çalışır: `npm test` veritabanı yoksa pozisyon testini
+  BAŞARISIZ saymaz, "ATLANDI" yazıp yeşil kalır.
 - M2'de ne var (çalışır durumda, tek adres: http://localhost:3000):
   - backend son "parkur" + son "pozisyonlar" mesajını önbellekler; yeni
     izleyici tik beklemeden sahneyi kurar. Backend web/'i express.static
@@ -137,12 +168,18 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
   - Son 60 sn'lik solan iz çizgisi (line-gradient) + tekneye tıklayınca
     canlı SOG/COG/kontra gösteren kart.
 - M2'ye bilinçli olarak DAHİL DEĞİL: sıralama, replay, zaman çizelgesi (Faz 3).
-- Sırada (M2 sonrası): M3 — mobil iskelet VEYA M4 — PostgreSQL + kalıcılık +
-  multi-tenant tasarım (sıra bir sonraki yönetim oturumunda netleşecek).
+- SIRADA (M3 devamı, kullanıcı onayı bekliyor): A2 — parkurun DB'ye taşınması
+  (parkur otoritesi sim'den backend'e geçer; `parkurGetir()` hazır ama henüz
+  hiçbir yerden çağrılmıyor). Sonra M4 — mobil iskelet.
 - WebSocket veri formatı (kesin, değişiklik önce sorulur):
   { "tekneId": "TR-001", "lat": 41.0451, "lon": 29.0341, "cog": 215, "sog": 6.4, "ts": 1720512000 }
-- Güvenlik açık işi: ?rol=simulator ingest ucu korumasız; pilot yarıştan (M5)
-  önce basit token doğrulaması eklenecek.
+- ÇÖZÜLDÜ (M3-3): ingest ucu artık korumasız değil, 'ingest' rollü token
+  şart. Kalan risk: token WS adresinde ?token= ile de taşınabiliyor (tarayıcı
+  WS'i özel başlık gönderemediği için); pilot seviyesinde kabul edildi, sonra
+  kısa ömürlü token'a taşınacak.
+- COMMIT EDİLMEMİŞ: web/yayinci.html (telefonun GPS'ini ingest bağlantısıyla
+  akıtan tek dosyalık yayıncı sayfası) çalışma kopyasında duruyor, henüz
+  depoya girmedi — ayrı adım olarak ele alınacak.
 
 ## FİZİKSEL DURUM
 - Henüz başlanmadı. Sıradaki: tracker karşılaştırma raporu (Faz 2 hazırlığı).
@@ -151,10 +188,14 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
 - 2D/3D paket ayrımının teknik sınırı: 3D paket ayrı build mi, feature flag
   mi? (Faz 2 başında karar)
 - Parkur şu an sim tarafından üretiliyor (yer tutucu Bebek–Kandilli
-  koordinatları). Gerçek kulüp rotası ve parkuru kimin gireceği (yarış
-  yönetimi arayüzü) M4/M5'te tasarlanacak.
-- İz çizgisi şu an sadece tarayıcı belleğinde (sayfa yenilenince sıfırlanır);
-  kalıcı iz/replay için pozisyon geçmişi DB'ye yazılmalı (M4).
+  koordinatları); DB'de de bir tohum parkur var ama ikisi bağlı değil.
+  Hangisinin otorite olacağı bir sonraki adımın (A2) konusu. Gerçek kulüp
+  rotasını kimin gireceği (yarış yönetimi arayüzü) M5'te tasarlanacak.
+- Pozisyon geçmişi artık DB'de (M3-4) ama HENÜZ OKUYAN EKRAN YOK: web'deki iz
+  çizgisi hâlâ yalnız tarayıcı belleğinde, sayfa yenilenince sıfırlanıyor.
+  Replay/kalıcı iz arayüzü Faz 3'te bu tablodan beslenecek.
+- Pozisyon tablosu büyümesi: 40 tekne × 2 sn ≈ 72 bin satır/saat. Pilotta
+  sorun değil, ama arşiv/temizlik politikası (retention) kararlaştırılmadı.
 - 40 tekne performansı orta seviye masaüstünde sorunsuz; düşük güçlü telefon
   tarayıcısında ölçülmedi (pilot öncesi test edilecek).
 - Fiyatlama/lisans modeli (etkinlik başına vs yıllık) — ürünleşme aşamasında.
@@ -168,14 +209,23 @@ Vizyon dokümanı: docs/Spring_Trophy_Proje_Tanitim_Dosyasi.docx
 - Yönetim: bu Claude.ai projesi. Yazılım: Claude Code (CLAUDE.md + DURUM.md).
 - Her Claude Code oturumu sonunda DURUM.md güncellenir ve Claude.ai proje
   bilgisine yeniden yüklenir.
-- NOT: Bu v6 hem Claude.ai proje bilgisine hem repo köküne konulmalı
+- NOT: Bu v7 hem Claude.ai proje bilgisine hem repo köküne konulmalı
   (eski sürüm silinerek).
 
-## NASIL ÇALIŞTIRILIR (M2 sonu)
-İki terminal, sonra tarayıcıda tek adres:
+## NASIL ÇALIŞTIRILIR (M3 sonu)
+Bir kerelik kurulum (veritabanı):
+```
+docker compose up -d            # PostgreSQL 17, kök .env'de POSTGRES_PASSWORD
+cd backend && npm run migrate   # şema + tohum veri (tekrarı güvenli)
+cd backend && npm run token-olustur -- 11111111-1111-4111-8111-111111111111 ingest "simülatör"
+# çıkan token'ı sim/.env içine BACKEND_TOKEN=... olarak yapıştır (bir kez gösterilir)
+```
+Her gün: iki terminal, sonra tarayıcıda tek adres:
 ```
 cd backend && npm start      # http://localhost:3000 (izleme ekranı + ws /canli)
 cd sim && npm start          # 40 tekne, 2 sn'de bir pozisyon
 ```
-Testler: `cd sim && npm test`, `cd backend && npm run yuk-testi`,
-`cd web && npm test` — 25.07.2026 itibarıyla üçü de yeşil.
+Geçmiş yazılıyor mu: `cd backend && npm run pozisyon-oku`
+Testler: `cd sim && npm test`, `cd backend && npm test`,
+`cd backend && npm run yuk-testi`, `cd web && npm test`
+— 27.07.2026 itibarıyla dördü de yeşil.
